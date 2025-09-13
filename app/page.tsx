@@ -6,22 +6,15 @@ import { createClient } from '@supabase/supabase-js';
 import { AlertTriangle, MapPin, Activity, Users, Bell, Brain } from 'lucide-react';
 import MLPredictions from '@/components/MLPredictions';
 
-// Dynamic import for Leaflet components to avoid SSR issues
-const MapContainer = dynamic(
-  () => import('react-leaflet').then((mod) => mod.MapContainer),
-  { ssr: false }
-);
-const TileLayer = dynamic(
-  () => import('react-leaflet').then((mod) => mod.TileLayer),
-  { ssr: false }
-);
-const Marker = dynamic(
-  () => import('react-leaflet').then((mod) => mod.Marker),
-  { ssr: false }
-);
-const Popup = dynamic(
-  () => import('react-leaflet').then((mod) => mod.Popup),
-  { ssr: false }
+// Dynamic import for Map component to avoid SSR issues
+const Map = dynamic(
+  () => import('@/components/Map'),
+  {
+    ssr: false,
+    loading: () => <div className="h-96 bg-gray-100 rounded-lg flex items-center justify-center">
+      <p className="text-gray-500">Loading map...</p>
+    </div>
+  }
 );
 
 import { demoAlerts, demoCrossings, demoSensors, updateDemoData } from '@/lib/demoData';
@@ -128,6 +121,32 @@ export default function Home() {
         return;
       }
 
+      // Try to fetch from API endpoints first (they handle Supabase internally)
+      try {
+        const [alertsRes, crossingsRes, sensorsRes] = await Promise.all([
+          fetch('/api/alerts?limit=10'),
+          fetch('/api/crossings?limit=20'),
+          fetch('/api/sensors?limit=50')
+        ]);
+
+        if (alertsRes.ok && crossingsRes.ok && sensorsRes.ok) {
+          const [alertsJson, crossingsJson, sensorsJson] = await Promise.all([
+            alertsRes.json(),
+            crossingsRes.json(),
+            sensorsRes.json()
+          ]);
+
+          setAlerts(alertsJson.alerts || []);
+          setCrossings(crossingsJson.crossings || []);
+          setSensors(sensorsJson.sensors || []);
+          setLoading(false);
+          return;
+        }
+      } catch (apiError) {
+        console.log('API endpoints not available, falling back to direct Supabase queries');
+      }
+
+      // Fallback to direct Supabase queries
       // Fetch alerts
       const { data: alertsData } = await supabase
         .from('alerts')
@@ -344,8 +363,8 @@ export default function Home() {
               {/* Map */}
               <div className="bg-white rounded-lg shadow p-6">
                 <h2 className="text-xl font-bold mb-4">Flood Map</h2>
-                <div className="h-96 bg-gray-100 rounded-lg flex items-center justify-center">
-                  <p className="text-gray-500">Interactive map loading...</p>
+                <div className="h-96">
+                  <Map sensors={sensors} crossings={crossings} alerts={alerts} />
                 </div>
               </div>
 
