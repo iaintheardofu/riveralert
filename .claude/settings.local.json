@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:www.aicowboys.com)",
+      "WebFetch(domain:www.bexarflood.org)",
+      "WebFetch(domain:www.sariverauthority.org)",
+      "WebFetch(domain:www.glo.texas.gov)",
+      "WebFetch(domain:www.sorm.state.tx.us)",
+      "WebSearch"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
