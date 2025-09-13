@@ -24,9 +24,12 @@ const Popup = dynamic(
   { ssr: false }
 );
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseKey);
+import { demoAlerts, demoCrossings, demoSensors, updateDemoData } from '@/lib/demoData';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const isSupabaseConfigured = supabaseUrl && supabaseKey && supabaseUrl !== 'https://YOUR_PROJECT_ID.supabase.co';
+const supabase = isSupabaseConfigured ? createClient(supabaseUrl, supabaseKey) : null;
 
 interface Alert {
   id: string;
@@ -73,37 +76,58 @@ export default function Home() {
   useEffect(() => {
     fetchData();
 
-    // Set up real-time subscriptions
-    const alertsChannel = supabase
-      .channel('alerts-channel')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'alerts' },
-        () => {
-          fetchData();
-        }
-      )
-      .subscribe();
+    if (isSupabaseConfigured && supabase) {
+      // Set up real-time subscriptions
+      const alertsChannel = supabase
+        .channel('alerts-channel')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'alerts' },
+          () => {
+            fetchData();
+          }
+        )
+        .subscribe();
 
-    const crossingsChannel = supabase
-      .channel('crossings-channel')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'crossings' },
-        () => {
-          fetchData();
-        }
-      )
-      .subscribe();
+      const crossingsChannel = supabase
+        .channel('crossings-channel')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'crossings' },
+          () => {
+            fetchData();
+          }
+        )
+        .subscribe();
 
-    return () => {
-      supabase.removeChannel(alertsChannel);
-      supabase.removeChannel(crossingsChannel);
-    };
+      return () => {
+        supabase.removeChannel(alertsChannel);
+        supabase.removeChannel(crossingsChannel);
+      };
+    } else {
+      // Use demo mode with simulated updates
+      const interval = setInterval(() => {
+        updateDemoData();
+        setAlerts([...demoAlerts]);
+        setCrossings([...demoCrossings]);
+        setSensors([...demoSensors]);
+      }, 5000); // Update every 5 seconds
+
+      return () => clearInterval(interval);
+    }
   }, []);
 
   const fetchData = async () => {
     try {
+      if (!isSupabaseConfigured || !supabase) {
+        // Use demo data
+        setAlerts(demoAlerts);
+        setCrossings(demoCrossings);
+        setSensors(demoSensors);
+        setLoading(false);
+        return;
+      }
+
       // Fetch alerts
       const { data: alertsData } = await supabase
         .from('alerts')
@@ -191,6 +215,21 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Demo Mode Banner */}
+      {!isSupabaseConfigured && (
+        <div className="bg-yellow-100 border-b border-yellow-300">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-yellow-800">
+                <span className="font-semibold">Demo Mode:</span> Running with simulated data.
+                See <a href="/SETUP.md" className="underline font-medium">setup guide</a> to connect real Supabase database.
+              </p>
+              <span className="text-xs text-yellow-600">Data updates every 5 seconds</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
