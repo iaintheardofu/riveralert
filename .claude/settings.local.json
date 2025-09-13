@@ -6,7 +6,8 @@
       "WebFetch(domain:www.sariverauthority.org)",
       "WebFetch(domain:www.glo.texas.gov)",
       "WebFetch(domain:www.sorm.state.tx.us)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []
