@@ -36,6 +36,7 @@ export default function RealTimeTexasDashboard({
   const [sensorData, setSensorData] = useState<Record<string, SensorReading>>({})
   const [alerts, setAlerts] = useState<AlertType[]>(initialAlerts)
   const [isLoading, setIsLoading] = useState(true)
+  const [sensorMap, setSensorMap] = useState<Record<string, any>>({})
 
   // Real-time hooks
   const { readings, isConnected: sensorsConnected } = useRealTimeSensorReadings()
@@ -45,7 +46,9 @@ export default function RealTimeTexasDashboard({
   useEffect(() => {
     async function loadData() {
       try {
+        console.log('🔍 Starting to load initial data...')
         const { sensors, readings, alerts: dbAlerts } = await loadInitialData()
+        console.log('✅ Load initial data completed successfully')
 
         // If we have readings, use them; otherwise create mock data from sensors
         let sensorReadings: Record<string, SensorReading>
@@ -59,11 +62,11 @@ export default function RealTimeTexasDashboard({
         }
 
         // Store sensors for displaying names
-        const sensorMap: Record<string, any> = {}
+        const sensorMapData: Record<string, any> = {}
         sensors.forEach(sensor => {
-          sensorMap[sensor.id] = sensor
+          sensorMapData[sensor.id] = sensor
         })
-        window.sensorMap = sensorMap // Store globally for easy access
+        setSensorMap(sensorMapData)
 
         setSensorData(sensorReadings)
         setAlerts(dbAlerts || [])
@@ -75,7 +78,10 @@ export default function RealTimeTexasDashboard({
           alertsCount: dbAlerts?.length || 0
         })
       } catch (error) {
-        console.error('Error loading initial data:', error)
+        console.error('❌ Error loading initial data:', error)
+        // Set some fallback data so the dashboard still works
+        setSensorData({})
+        setAlerts([])
         setIsLoading(false)
       }
     }
@@ -290,7 +296,7 @@ export default function RealTimeTexasDashboard({
               <Card key={sensorId} className="hover:shadow-lg transition-shadow">
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center justify-between">
-                    <span className="truncate">{(window as any)?.sensorMap?.[sensorId]?.name || sensorId}</span>
+                    <span className="truncate">{sensorMap[sensorId]?.name || sensorId}</span>
                     <Badge variant={status === 'critical' ? 'destructive' :
                                   status === 'warning' ? 'secondary' : 'outline'}>
                       {status}
