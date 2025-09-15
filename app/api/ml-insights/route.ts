@@ -1,15 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseClient, demoData } from '@/lib/supabase';
 import { LinearPredictor } from '@/lib/ml/predictor';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseKey);
-
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const insightType = searchParams.get('type') || 'overview';
+    const supabase = getSupabaseClient();
+
+    // Use demo data if Supabase is not configured
+    if (!supabase) {
+      return NextResponse.json({
+        patterns: [],
+        correlations: {},
+        anomalies: [],
+        overview: { risk_level: 'moderate', confidence: 0.75 }
+      });
+    }
 
     switch (insightType) {
       case 'patterns': {

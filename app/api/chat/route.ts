@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import Anthropic from '@anthropic-ai/sdk'
 
-// Initialize AI clients
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-})
+// Initialize AI clients with optional API keys
+const openai = process.env.OPENAI_API_KEY
+  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  : null
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY
-})
+const anthropic = process.env.ANTHROPIC_API_KEY
+  ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+  : null
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     let response = ''
 
     // Try Claude first (more powerful for complex analysis)
-    if (process.env.ANTHROPIC_API_KEY) {
+    if (anthropic) {
       try {
         const claudeMessages = messages.map((msg: any) => ({
           role: msg.role === 'assistant' ? 'assistant' : 'user',
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Use OpenAI if Claude fails or isn't configured
-    if (!response && process.env.OPENAI_API_KEY) {
+    if (!response && openai) {
       try {
         const completion = await openai.chat.completions.create({
           model: 'gpt-4',

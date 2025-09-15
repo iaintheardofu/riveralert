@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseClient, demoData } from '@/lib/supabase';
 import { FloodAnalyzer } from '@/lib/ml/floodAnalyzer';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Initialize flood analyzer
 const floodAnalyzer = new FloodAnalyzer();
@@ -14,6 +10,16 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const sensorId = searchParams.get('sensor_id');
     const hours = parseInt(searchParams.get('hours') || '24');
+    const supabase = getSupabaseClient();
+
+    // Use demo data if Supabase is not configured
+    if (!supabase) {
+      const predictions = sensorId
+        ? demoData.predictions.filter(p => p.sensor_id === sensorId)
+        : demoData.predictions;
+
+      return NextResponse.json({ predictions });
+    }
 
     // Fetch recent sensor readings
     const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
@@ -76,6 +82,14 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { action } = body;
+    const supabase = getSupabaseClient();
+
+    if (!supabase) {
+      return NextResponse.json({
+        message: 'Demo mode - training not available',
+        metrics: { accuracy: 0.85, precision: 0.82, recall: 0.88 }
+      });
+    }
 
     if (action === 'train') {
       // Fetch historical data for training
