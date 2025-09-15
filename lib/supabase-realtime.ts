@@ -74,8 +74,12 @@ export interface Zone {
 
 // Real-time Supabase client with enhanced configuration
 export function createRealtimeClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error('Supabase environment variables not configured')
+  }
 
   return createClient(supabaseUrl, supabaseKey, {
     realtime: {
@@ -94,11 +98,30 @@ export function createRealtimeClient() {
 
 // Real-time subscription manager
 export class RiverAlertRealtime {
-  private supabase: ReturnType<typeof createRealtimeClient>
+  private supabase: ReturnType<typeof createRealtimeClient> | null = null
   private subscriptions = new Map<string, any>()
+  private initialized = false
 
   constructor() {
-    this.supabase = createRealtimeClient()
+    // Don't initialize immediately - do it lazily
+  }
+
+  private initializeClient() {
+    if (!this.initialized) {
+      try {
+        this.supabase = createRealtimeClient()
+        this.initialized = true
+      } catch (error) {
+        console.error('Failed to initialize Supabase realtime client:', error)
+        this.supabase = null
+        this.initialized = true // Mark as initialized even if failed
+      }
+    }
+  }
+
+  private ensureClient() {
+    this.initializeClient()
+    return this.supabase
   }
 
   // Subscribe to sensor readings for real-time updates
@@ -107,7 +130,13 @@ export class RiverAlertRealtime {
     onUpdate?: (payload: RealtimePostgresChangesPayload<SensorReading>) => void,
     onInsert?: (payload: RealtimePostgresChangesPayload<SensorReading>) => void
   ) {
-    let query = this.supabase.channel('sensor_readings')
+    const client = this.ensureClient()
+    if (!client) {
+      console.warn('Supabase client not available, skipping realtime subscription')
+      return null
+    }
+
+    let query = client.channel('sensor_readings')
       .on(
         'postgres_changes',
         {
@@ -146,7 +175,13 @@ export class RiverAlertRealtime {
     onInsert?: (payload: RealtimePostgresChangesPayload<Alert>) => void,
     onDelete?: (payload: RealtimePostgresChangesPayload<Alert>) => void
   ) {
-    const query = this.supabase.channel('alerts')
+    const client = this.ensureClient()
+    if (!client) {
+      console.warn('Supabase client not available, skipping alerts subscription')
+      return null
+    }
+
+    const query = client.channel('alerts')
       .on(
         'postgres_changes',
         {
@@ -193,7 +228,13 @@ export class RiverAlertRealtime {
   subscribeSensorStatus(
     onUpdate?: (payload: RealtimePostgresChangesPayload<Sensor>) => void
   ) {
-    const query = this.supabase.channel('sensors')
+    const client = this.ensureClient()
+    if (!client) {
+      console.warn('Supabase client not available, skipping sensor status subscription')
+      return null
+    }
+
+    const query = client.channel('sensors')
       .on(
         'postgres_changes',
         {
@@ -217,7 +258,13 @@ export class RiverAlertRealtime {
     sensorIds?: string[],
     onInsert?: (payload: any) => void
   ) {
-    const query = this.supabase.channel('predictions')
+    const client = this.ensureClient()
+    if (!client) {
+      console.warn('Supabase client not available, skipping predictions subscription')
+      return null
+    }
+
+    const query = client.channel('predictions')
       .on(
         'postgres_changes',
         {
@@ -245,7 +292,13 @@ export class RiverAlertRealtime {
     filter?: string,
     callback?: (payload: any) => void
   ) {
-    let channel = this.supabase.channel(channelName)
+    const client = this.ensureClient()
+    if (!client) {
+      console.warn('Supabase client not available, skipping custom subscription')
+      return null
+    }
+
+    let channel = client.channel(channelName)
 
     events.forEach(event => {
       channel = channel.on(
@@ -272,27 +325,35 @@ export class RiverAlertRealtime {
   unsubscribe(channelName: string) {
     const subscription = this.subscriptions.get(channelName)
     if (subscription) {
-      this.supabase.removeChannel(subscription)
+      const client = this.ensureClient()
+      if (client) {
+        client.removeChannel(subscription)
+      }
       this.subscriptions.delete(channelName)
     }
   }
 
   // Unsubscribe from all channels
   unsubscribeAll() {
-    this.subscriptions.forEach((subscription, name) => {
-      this.supabase.removeChannel(subscription)
-    })
+    const client = this.ensureClient()
+    if (client) {
+      this.subscriptions.forEach((subscription, name) => {
+        client.removeChannel(subscription)
+      })
+    }
     this.subscriptions.clear()
   }
 
   // Get connection status
   getConnectionStatus() {
-    return this.supabase.realtime.isConnected()
+    const client = this.ensureClient()
+    return client?.realtime.isConnected() ?? false
   }
 
   // Manual reconnection
   reconnect() {
-    this.supabase.realtime.disconnect()
+    const client = this.ensureClient()
+    client?.realtime.disconnect()
     // Resubscribe to all channels
     const channelNames = Array.from(this.subscriptions.keys())
     this.unsubscribeAll()
@@ -303,8 +364,14 @@ export class RiverAlertRealtime {
 
   // Helper to simulate real-time data for demo purposes
   async simulateRealTimeData() {
+    const client = this.ensureClient()
+    if (!client) {
+      console.warn('Supabase client not available, skipping simulation')
+      return
+    }
+
     // Get existing sensors
-    const { data: sensors } = await this.supabase
+    const { data: sensors } = await client
       .from('sensors')
       .select('id')
       .eq('status', 'active')
@@ -325,7 +392,7 @@ export class RiverAlertRealtime {
           timestamp: new Date().toISOString(),
         }
 
-        await this.supabase
+        await client
           .from('sensor_readings')
           .insert(reading)
       }
@@ -334,7 +401,7 @@ export class RiverAlertRealtime {
 
   // Get the Supabase client for direct queries
   getClient() {
-    return this.supabase
+    return this.ensureClient()
   }
 }
 

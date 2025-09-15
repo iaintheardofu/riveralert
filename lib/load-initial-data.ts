@@ -3,8 +3,14 @@ import { Sensor, SensorReading, Alert, Zone } from './supabase-realtime'
 
 // Function to load initial data from your existing database
 export async function loadInitialData() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseKey) {
+    console.warn('Supabase environment variables not configured, using fallback data')
+    return { sensors: [], readings: [], alerts: [], zones: [] }
+  }
+
   const supabase = createClient(supabaseUrl, supabaseKey)
 
   try {
