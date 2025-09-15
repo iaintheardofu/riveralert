@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { RealtimePostgresChangesPayload } from '@supabase/supabase-js'
+import { useState, useEffect } from 'react'
 
 // Types matching your existing database schema
 export interface SensorReading {
