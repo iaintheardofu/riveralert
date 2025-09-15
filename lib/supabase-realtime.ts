@@ -414,26 +414,40 @@ export function useRealTimeSensorReadings(sensorIds?: string[]) {
   const [isConnected, setIsConnected] = useState(false)
 
   useEffect(() => {
-    const subscription = riverAlertRealtime.subscribeSensorReadings(
-      sensorIds,
-      (payload) => {
-        setReadings(prev => prev.map(r =>
-          r.id === payload.new.id ? payload.new : r
-        ))
-      },
-      (payload) => {
-        setReadings(prev => [payload.new, ...prev.slice(0, 99)]) // Keep last 100
+    try {
+      const subscription = riverAlertRealtime.subscribeSensorReadings(
+        sensorIds,
+        (payload) => {
+          setReadings(prev => prev.map(r =>
+            r.id === payload.new.id ? payload.new : r
+          ))
+        },
+        (payload) => {
+          setReadings(prev => [payload.new, ...prev.slice(0, 99)]) // Keep last 100
+        }
+      )
+
+      // Only update connection status if subscription was successful
+      if (subscription) {
+        setIsConnected(riverAlertRealtime.getConnectionStatus())
+      } else {
+        setIsConnected(false)
       }
-    )
 
-    setIsConnected(riverAlertRealtime.getConnectionStatus())
-
-    return () => {
-      riverAlertRealtime.unsubscribe('readings')
+      return () => {
+        try {
+          riverAlertRealtime.unsubscribe('readings')
+        } catch (error) {
+          console.warn('Error unsubscribing from sensor readings:', error)
+        }
+      }
+    } catch (error) {
+      console.warn('Error setting up sensor readings subscription:', error)
+      setIsConnected(false)
     }
   }, [sensorIds])
 
-  return { readings, isConnected }
+  return { readings: readings ?? [], isConnected }
 }
 
 export function useRealTimeAlerts() {
@@ -441,26 +455,40 @@ export function useRealTimeAlerts() {
   const [isConnected, setIsConnected] = useState(false)
 
   useEffect(() => {
-    const subscription = riverAlertRealtime.subscribeAlerts(
-      (payload) => {
-        setAlerts(prev => prev.map(a =>
-          a.id === payload.new.id ? payload.new : a
-        ))
-      },
-      (payload) => {
-        setAlerts(prev => [payload.new, ...prev])
-      },
-      (payload) => {
-        setAlerts(prev => prev.filter(a => a.id !== payload.old.id))
+    try {
+      const subscription = riverAlertRealtime.subscribeAlerts(
+        (payload) => {
+          setAlerts(prev => prev.map(a =>
+            a.id === payload.new.id ? payload.new : a
+          ))
+        },
+        (payload) => {
+          setAlerts(prev => [payload.new, ...prev])
+        },
+        (payload) => {
+          setAlerts(prev => prev.filter(a => a.id !== payload.old.id))
+        }
+      )
+
+      // Only update connection status if subscription was successful
+      if (subscription) {
+        setIsConnected(riverAlertRealtime.getConnectionStatus())
+      } else {
+        setIsConnected(false)
       }
-    )
 
-    setIsConnected(riverAlertRealtime.getConnectionStatus())
-
-    return () => {
-      riverAlertRealtime.unsubscribe('alerts')
+      return () => {
+        try {
+          riverAlertRealtime.unsubscribe('alerts')
+        } catch (error) {
+          console.warn('Error unsubscribing from alerts:', error)
+        }
+      }
+    } catch (error) {
+      console.warn('Error setting up alerts subscription:', error)
+      setIsConnected(false)
     }
   }, [])
 
-  return { alerts, isConnected }
+  return { alerts: alerts ?? [], isConnected }
 }

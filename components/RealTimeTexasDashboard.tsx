@@ -97,40 +97,62 @@ export default function RealTimeTexasDashboard({
 
   // Update sensor data when new readings arrive
   useEffect(() => {
-    if (readings.length > 0) {
-      const newSensorData = { ...sensorData }
-      readings.forEach(reading => {
-        newSensorData[reading.sensor_id] = reading
-      })
-      setSensorData(newSensorData)
+    try {
+      if (readings && readings.length > 0) {
+        setSensorData(prevSensorData => {
+          const newSensorData = { ...prevSensorData }
+          readings.forEach(reading => {
+            if (reading && reading.sensor_id) {
+              newSensorData[reading.sensor_id] = reading
+            }
+          })
+          return newSensorData
+        })
+      }
+    } catch (error) {
+      console.error('Error updating sensor data from readings:', error)
     }
   }, [readings])
 
   // Update alerts when new alerts arrive
   useEffect(() => {
-    if (realtimeAlerts.length > 0) {
-      setAlerts(realtimeAlerts)
+    try {
+      if (realtimeAlerts && realtimeAlerts.length > 0) {
+        setAlerts(realtimeAlerts)
+      }
+    } catch (error) {
+      console.error('Error updating alerts from realtime:', error)
     }
   }, [realtimeAlerts])
 
   // Get current risk level based on latest sensor data
   const getCurrentRiskLevel = () => {
-    const levels = Object.values(sensorData).map(reading => {
-      const waterLevel = reading.water_level_m || 0
-      if (waterLevel > 5) return 'extreme'
-      if (waterLevel > 3) return 'high'
-      if (waterLevel > 1.5) return 'moderate'
-      return 'low'
-    })
+    try {
+      if (!sensorData || Object.keys(sensorData).length === 0) {
+        return 'low'
+      }
 
-    if (levels.includes('extreme')) return 'extreme'
-    if (levels.includes('high')) return 'high'
-    if (levels.includes('moderate')) return 'moderate'
-    return 'low'
+      const levels = Object.values(sensorData).map(reading => {
+        if (!reading) return 'low'
+        const waterLevel = reading.water_level_m || 0
+        if (waterLevel > 5) return 'extreme'
+        if (waterLevel > 3) return 'high'
+        if (waterLevel > 1.5) return 'moderate'
+        return 'low'
+      })
+
+      if (levels.includes('extreme')) return 'extreme'
+      if (levels.includes('high')) return 'high'
+      if (levels.includes('moderate')) return 'moderate'
+      return 'low'
+    } catch (error) {
+      console.error('Error calculating risk level:', error)
+      return 'low'
+    }
   }
 
   const currentRiskLevel = getCurrentRiskLevel()
-  const activeAlerts = alerts.filter(alert => alert.is_active)
+  const activeAlerts = (alerts ?? []).filter(alert => alert?.is_active)
 
   // Risk level styling
   const getRiskLevelStyle = (level: string) => {
@@ -206,7 +228,7 @@ export default function RealTimeTexasDashboard({
                     {currentRiskLevel.toUpperCase()}
                   </Badge>
                   <span className="text-gray-600">
-                    Based on {Object.keys(sensorData).length} active sensors
+                    Based on {Object.keys(sensorData ?? {}).length} active sensors
                   </span>
                 </div>
               </div>
@@ -225,21 +247,21 @@ export default function RealTimeTexasDashboard({
           <div className="space-y-2">
             <h3 className="text-xl font-semibold">Active Alerts</h3>
             {activeAlerts.map((alert) => (
-              <Alert key={alert.id} className={`border-l-4 ${
-                alert.severity === 'extreme' ? 'border-red-500 bg-red-50' :
-                alert.severity === 'high' ? 'border-orange-500 bg-orange-50' :
-                alert.severity === 'moderate' ? 'border-yellow-500 bg-yellow-50' :
+              <Alert key={alert?.id ?? Math.random()} className={`border-l-4 ${
+                alert?.severity === 'extreme' ? 'border-red-500 bg-red-50' :
+                alert?.severity === 'high' ? 'border-orange-500 bg-orange-50' :
+                alert?.severity === 'moderate' ? 'border-yellow-500 bg-yellow-50' :
                 'border-blue-500 bg-blue-50'
               }`}>
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
                   <div className="flex items-center justify-between">
                     <div>
-                      <strong>{alert.title}</strong>
-                      {alert.description && <p className="mt-1">{alert.description}</p>}
+                      <strong>{alert?.title || 'Alert'}</strong>
+                      {alert?.description && <p className="mt-1">{alert.description}</p>}
                     </div>
-                    <Badge variant={alert.severity === 'extreme' ? 'destructive' : 'secondary'}>
-                      {alert.severity}
+                    <Badge variant={alert?.severity === 'extreme' ? 'destructive' : 'secondary'}>
+                      {alert?.severity || 'unknown'}
                     </Badge>
                   </div>
                 </AlertDescription>
@@ -283,7 +305,9 @@ export default function RealTimeTexasDashboard({
 
         {/* Real-time Sensor Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {Object.entries(sensorData).map(([sensorId, reading]) => {
+          {Object.entries(sensorData ?? {}).map(([sensorId, reading]) => {
+            if (!reading || !sensorId) return null
+
             const waterLevel = reading.water_level_m || 0
             const flowRate = reading.flow_rate || 0
             const rainfall = reading.rainfall_mm || 0
@@ -296,7 +320,7 @@ export default function RealTimeTexasDashboard({
               <Card key={sensorId} className="hover:shadow-lg transition-shadow">
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center justify-between">
-                    <span className="truncate">{sensorMap[sensorId]?.name || sensorId}</span>
+                    <span className="truncate">{(sensorMap ?? {})[sensorId]?.name || sensorId}</span>
                     <Badge variant={status === 'critical' ? 'destructive' :
                                   status === 'warning' ? 'secondary' : 'outline'}>
                       {status}

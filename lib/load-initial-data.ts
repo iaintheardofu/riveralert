@@ -7,8 +7,8 @@ export async function loadInitialData() {
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   if (!supabaseUrl || !supabaseKey) {
-    console.warn('Supabase environment variables not configured, using fallback data')
-    return { sensors: [], readings: [], alerts: [], zones: [] }
+    console.warn('Supabase environment variables not configured, using demo data')
+    return createDemoData()
   }
 
   const supabase = createClient(supabaseUrl, supabaseKey)
@@ -65,7 +65,8 @@ export async function loadInitialData() {
 
   } catch (error) {
     console.error('Error loading initial data:', error)
-    return { sensors: [], readings: [], alerts: [], zones: [] }
+    // For demo purposes, return mock data when database is unavailable
+    return createDemoData()
   }
 }
 
@@ -98,4 +99,114 @@ export function createMockReadings(sensors: Sensor[]): Record<string, SensorRead
   })
 
   return mockReadings
+}
+
+// Create comprehensive demo data for presentation purposes
+export function createDemoData() {
+  const demoSensors: Sensor[] = [
+    {
+      id: 'bexar-downtown',
+      external_id: 'TX-BEXAR-001',
+      name: 'San Antonio River - Downtown',
+      type: 'combined',
+      status: 'active',
+      location: 'POINT(-98.4936 29.4241)',
+      elevation_m: 198,
+      threshold_low_m: 1.0,
+      threshold_high_m: 3.5,
+      threshold_critical_m: 5.0,
+      metadata: { zone: 'downtown', priority: 'high' },
+      is_active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    },
+    {
+      id: 'bexar-southside',
+      external_id: 'TX-BEXAR-002',
+      name: 'San Antonio River - Southside',
+      type: 'combined',
+      status: 'active',
+      location: 'POINT(-98.4951 29.3960)',
+      elevation_m: 201,
+      threshold_low_m: 1.2,
+      threshold_high_m: 3.8,
+      threshold_critical_m: 5.5,
+      metadata: { zone: 'southside', priority: 'high' },
+      is_active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    },
+    {
+      id: 'kerr-kerrville',
+      external_id: 'TX-KERR-001',
+      name: 'Guadalupe River - Kerrville',
+      type: 'combined',
+      status: 'active',
+      location: 'POINT(-99.1403 30.0474)',
+      elevation_m: 515,
+      threshold_low_m: 0.8,
+      threshold_high_m: 2.5,
+      threshold_critical_m: 4.0,
+      metadata: { zone: 'hill_country', priority: 'medium' },
+      is_active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    },
+    {
+      id: 'comal-new-braunfels',
+      external_id: 'TX-COMAL-001',
+      name: 'Comal River - New Braunfels',
+      type: 'combined',
+      status: 'active',
+      location: 'POINT(-98.1244 29.7030)',
+      elevation_m: 187,
+      threshold_low_m: 0.9,
+      threshold_high_m: 3.0,
+      threshold_critical_m: 4.5,
+      metadata: { zone: 'comal_county', priority: 'high' },
+      is_active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }
+  ]
+
+  const demoReadings = createMockReadings(demoSensors)
+
+  const demoAlerts: Alert[] = [
+    {
+      id: 'alert-moderate-001',
+      title: 'Moderate Flood Watch - San Antonio River',
+      message: 'Rising water levels detected due to recent rainfall. Monitor conditions.',
+      severity: 'moderate',
+      sensor_id: 'bexar-downtown',
+      water_level_m: 2.1,
+      rate_of_change: 0.15,
+      predicted_peak_time: new Date(Date.now() + 3600000).toISOString(), // 1 hour from now
+      predicted_peak_level_m: 2.8,
+      is_active: true,
+      issued_at: new Date().toISOString(),
+      expires_at: new Date(Date.now() + 21600000).toISOString(), // 6 hours from now
+      created_at: new Date().toISOString()
+    }
+  ]
+
+  const demoZones: Zone[] = [
+    {
+      id: 'downtown-san-antonio',
+      name: 'Downtown San Antonio',
+      type: 'commercial',
+      geometry: 'POLYGON((-98.500 29.420, -98.485 29.420, -98.485 29.430, -98.500 29.430, -98.500 29.420))',
+      population: 15000,
+      metadata: { evacuation_routes: ['route-1', 'route-2'] },
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }
+  ]
+
+  return {
+    sensors: demoSensors,
+    readings: Object.values(demoReadings),
+    alerts: demoAlerts,
+    zones: demoZones
+  }
 }

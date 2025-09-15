@@ -21,7 +21,8 @@
       "Bash(xargs:*)",
       "Bash(npm run dev:*)",
       "Bash(npx supabase link:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(vercel:*)"
     ],
     "deny": [],
     "ask": []
