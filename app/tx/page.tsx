@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { TexasGeoConfig } from '@/apps/web/config/geo.tx'
+import { checkDatabaseConnection } from '@/lib/database-setup'
 import {
   AlertTriangle,
   Activity,
@@ -23,7 +24,9 @@ import {
   Loader2,
   CloudRain,
   TrendingUp,
-  AlertCircle
+  AlertCircle,
+  Database,
+  Settings
 } from 'lucide-react'
 
 // Dynamic import for Leaflet (client-side only)

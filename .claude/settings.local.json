@@ -18,7 +18,10 @@
       "Bash(npm install:*)",
       "Bash(chmod:*)",
       "Bash(git checkout:*)",
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npx supabase link:*)",
+      "Bash(node:*)"
     ],
     "deny": [],
     "ask": []
